@@ -1,26 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { api } from "../api/client";
-import type { ProviderInfo, TrialCreatePayload } from "../types";
+import type { ProviderInfo, ReferenceCrop, TrialCreatePayload } from "../types";
 import {
   trialFormSchema,
   ASPECT_RATIOS,
-  IMAGE_SIZES,
+  MAX_IMAGES_PER_PROMPT,
+  getSizesForModel,
+  supportsAspectRatio,
 } from "../schemas/trial";
 
 interface Props {
   onRun: (payload: TrialCreatePayload) => void;
   onBatchRun: (payloads: TrialCreatePayload[]) => void;
   running: boolean;
+  referenceCrop: ReferenceCrop | null;
 }
 
-export default function PromptEditor({ onRun, onBatchRun, running }: Props) {
+export default function PromptEditor({
+  onRun,
+  onBatchRun,
+  running,
+  referenceCrop,
+}: Props) {
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
-  const [prompt, setPrompt] = useState("");
+  const [prompts, setPrompts] = useState<string[]>([""]);
   const [temperature, setTemperature] = useState("1");
-  const [batchMode, setBatchMode] = useState(false);
-  const [batchPrompts, setBatchPrompts] = useState("");
+  const [imagesPerPrompt, setImagesPerPrompt] = useState(1);
   const [aspectRatio, setAspectRatio] = useState("");
   const [imageSize, setImageSize] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -39,14 +46,35 @@ export default function PromptEditor({ onRun, onBatchRun, running }: Props) {
     providers.find((p) => p.name === provider)?.models || [];
 
   useEffect(() => {
-    const initializeModel = () => {
-      if (currentModels.length > 0 && !currentModels.includes(model)) {
-        setModel(currentModels[0]);
-      }
+    if (currentModels.length > 0 && !currentModels.includes(model)) {
+      setModel(currentModels[0]);
     }
-
-    initializeModel()
   }, [provider, currentModels, model, providers]);
+
+  const availableSizes = getSizesForModel(model);
+  const hasAspectRatio = supportsAspectRatio(model);
+
+  // Reset image size / aspect ratio when model changes and doesn't support them
+  useEffect(() => {
+    if (imageSize && !availableSizes.some((s) => s.value === imageSize)) {
+      setImageSize("");
+    }
+    if (aspectRatio && !hasAspectRatio) {
+      setAspectRatio("");
+    }
+  }, [model, availableSizes, imageSize, aspectRatio, hasAspectRatio]);
+
+  const updatePrompt = (index: number, value: string) => {
+    setPrompts((prev) => prev.map((p, i) => (i === index ? value : p)));
+  };
+
+  const addPrompt = () => {
+    setPrompts((prev) => [...prev, ""]);
+  };
+
+  const removePrompt = (index: number) => {
+    setPrompts((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const buildPayload = (promptText: string): TrialCreatePayload => {
     const normalized_params: Record<string, unknown> = {
@@ -54,6 +82,7 @@ export default function PromptEditor({ onRun, onBatchRun, running }: Props) {
     };
     if (aspectRatio) normalized_params.aspect_ratio = aspectRatio;
     if (imageSize) normalized_params.image_size = imageSize;
+    if (referenceCrop) normalized_params.reference_crop = referenceCrop;
 
     return {
       prompt: promptText,
@@ -63,32 +92,36 @@ export default function PromptEditor({ onRun, onBatchRun, running }: Props) {
     };
   };
 
+  const nonEmptyPrompts = prompts
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const totalTrials = nonEmptyPrompts.length * imagesPerPrompt;
+
   const validate = (): boolean => {
-    const formData = batchMode
-      ? {
-          batchMode: true as const,
-          provider,
-          model,
-          temperature: parseFloat(temperature),
-          batchPrompts,
-          ...(aspectRatio && { aspectRatio }),
-          ...(imageSize && { imageSize }),
-        }
-      : {
-          batchMode: false as const,
-          provider,
-          model,
-          temperature: parseFloat(temperature),
-          prompt,
-          ...(aspectRatio && { aspectRatio }),
-          ...(imageSize && { imageSize }),
-        };
+    const formData = {
+      provider,
+      model,
+      temperature: parseFloat(temperature),
+      prompts: prompts.map((p) => p.trim()),
+      imagesPerPrompt,
+      ...(aspectRatio && { aspectRatio }),
+      ...(imageSize && { imageSize }),
+    };
 
     const result = trialFormSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of result.error.issues) {
-        const key = String(issue.path[0] || "form");
+        const path = issue.path;
+        const firstPath = path[0];
+        // prompts.0 → "prompt-0", prompts → "prompts"
+        const key =
+          firstPath === "prompts" && typeof path[1] === "number"
+            ? `prompt-${path[1]}`
+            : typeof firstPath === "string" || typeof firstPath === "number"
+              ? String(firstPath)
+              : "form";
         if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
       setErrors(fieldErrors);
@@ -98,29 +131,47 @@ export default function PromptEditor({ onRun, onBatchRun, running }: Props) {
     return true;
   };
 
-  const handleRun = () => {
+  const handleSubmit = () => {
     if (!validate()) return;
-    onRun(buildPayload(prompt.trim()));
+
+    const payloads: TrialCreatePayload[] = [];
+    for (const text of nonEmptyPrompts) {
+      for (let i = 0; i < imagesPerPrompt; i++) {
+        payloads.push(buildPayload(text));
+      }
+    }
+
+    if (payloads.length === 1) {
+      onRun(payloads[0]);
+    } else {
+      onBatchRun(payloads);
+    }
   };
 
-  const handleBatchRun = () => {
-    if (!validate()) return;
-    const prompts = batchPrompts
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-    onBatchRun(prompts.map(buildPayload));
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
+
+  const selectClass =
+    "w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-colors";
+  const labelClass = "block text-xs font-medium text-gray-400 mb-1";
 
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-      <div className="mb-2 flex flex-wrap gap-3">
+    <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+      {/* Row 1: Provider, Model, Temperature, Images per prompt */}
+      <div className="mb-3 grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
         <div>
+          <label className={labelClass} htmlFor="pe-provider">
+            Provider
+          </label>
           <select
-            title="provider"
+            id="pe-provider"
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
-            className="rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm"
+            className={selectClass}
           >
             {providers.map((p) => (
               <option key={p.name} value={p.name}>
@@ -132,12 +183,16 @@ export default function PromptEditor({ onRun, onBatchRun, running }: Props) {
             <p className="text-red-400 text-xs mt-1">{errors.provider}</p>
           )}
         </div>
+
         <div>
+          <label className={labelClass} htmlFor="pe-model">
+            Model
+          </label>
           <select
-            title="model"
+            id="pe-model"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm"
+            className={selectClass}
           >
             {currentModels.map((m) => (
               <option key={m} value={m}>
@@ -149,107 +204,183 @@ export default function PromptEditor({ onRun, onBatchRun, running }: Props) {
             <p className="text-red-400 text-xs mt-1">{errors.model}</p>
           )}
         </div>
+
         <div>
-          <label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="2"
-              value={temperature}
-              onChange={(e) => setTemperature(e.target.value)}
-              className="w-20 rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm"
-              title="Temperature"
-            />
-            Temperature
-          </label>
+          <div className="mb-1 flex items-center justify-between">
+            <label className={labelClass + " mb-0"} htmlFor="pe-temp">
+              Temperature
+            </label>
+            <span className="text-xs font-medium text-gray-300">
+              {Number(temperature).toFixed(1)}
+            </span>
+          </div>
+          <input
+            id="pe-temp"
+            type="range"
+            step="0.1"
+            min="0"
+            max="2"
+            value={temperature}
+            onChange={(e) => setTemperature(e.target.value)}
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-700 accent-blue-500"
+            aria-describedby="pe-temp-help"
+          />
+          <div className="mt-1 flex justify-between text-[11px] text-gray-500">
+            <span>0.0</span>
+            <span>2.0</span>
+          </div>
+          <p id="pe-temp-help" className="mt-1 text-[11px] text-gray-500">
+            Lower = more consistent output. Higher = more creative variation.
+          </p>
           {errors.temperature && (
             <p className="text-red-400 text-xs mt-1">{errors.temperature}</p>
           )}
         </div>
-        <label className="flex items-center gap-1.5 text-sm text-gray-400">
-          <input
-            type="checkbox"
-            checked={batchMode}
-            onChange={(e) => setBatchMode(e.target.checked)}
-          />
-          Batch
-        </label>
+
+        <div>
+          <label className={labelClass} htmlFor="pe-count">
+            Images
+          </label>
+          <select
+            id="pe-count"
+            value={imagesPerPrompt}
+            onChange={(e) => setImagesPerPrompt(Number(e.target.value))}
+            className={selectClass}
+          >
+            {Array.from({ length: MAX_IMAGES_PER_PROMPT }, (_, i) => i + 1).map(
+              (n) => (
+                <option key={n} value={n}>
+                  {n}x
+                </option>
+              )
+            )}
+          </select>
+        </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-3">
+      {/* Row 2: Aspect Ratio, Image Size */}
+      <div className="mb-4 grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
         <div>
+          <label className={labelClass} htmlFor="pe-aspect">
+            Aspect Ratio
+          </label>
           <select
-            title="Aspect Ratio"
+            id="pe-aspect"
             value={aspectRatio}
             onChange={(e) => setAspectRatio(e.target.value)}
-            className="rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm"
+            className={selectClass}
+            disabled={!hasAspectRatio}
           >
-            <option value="">Aspect Ratio</option>
+            <option value="">Auto</option>
             {ASPECT_RATIOS.map((ar) => (
               <option key={ar} value={ar}>
                 {ar}
               </option>
             ))}
           </select>
+          {!hasAspectRatio && (
+            <p className="text-gray-600 text-xs mt-1">Not supported by model</p>
+          )}
         </div>
+
         <div>
+          <label className={labelClass} htmlFor="pe-size">
+            Image Size
+          </label>
           <select
-            title="Image Size"
+            id="pe-size"
             value={imageSize}
             onChange={(e) => setImageSize(e.target.value)}
-            className="rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm"
+            className={selectClass}
+            disabled={availableSizes.length <= 1}
           >
-            <option value="">Image Size</option>
-            {IMAGE_SIZES.map((s) => (
+            <option value="">Default</option>
+            {availableSizes.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
           </select>
+          {availableSizes.length <= 1 && (
+            <p className="text-gray-600 text-xs mt-1">Fixed by model</p>
+          )}
         </div>
+
+        <div />
+        <div />
       </div>
 
-      {batchMode ? (
-        <>
-          <textarea
-            value={batchPrompts}
-            onChange={(e) => setBatchPrompts(e.target.value)}
-            placeholder="One prompt per line..."
-            rows={5}
-            className="mb-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-          {errors.batchPrompts && (
-            <p className="text-red-400 text-xs mb-2">{errors.batchPrompts}</p>
-          )}
+      {/* Separator */}
+      <div className="border-t border-gray-800 mb-4" />
+
+      {/* Prompt list */}
+      <div className="space-y-3">
+        {prompts.map((text, index) => (
+          <div key={index}>
+            <div className="flex items-center justify-between mb-1">
+              <label
+                className={labelClass + " mb-0"}
+                htmlFor={`pe-prompt-${index}`}
+              >
+                Prompt {prompts.length > 1 ? index + 1 : ""}
+              </label>
+              {prompts.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removePrompt(index)}
+                  className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <textarea
+              id={`pe-prompt-${index}`}
+              value={text}
+              onChange={(e) => updatePrompt(index, e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe the image transformation..."
+              rows={2}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-colors"
+            />
+            {errors[`prompt-${index}`] && (
+              <p className="text-red-400 text-xs mt-1">
+                {errors[`prompt-${index}`]}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add prompt + footer */}
+      <div className="mt-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <button
-            onClick={handleBatchRun}
-            disabled={running}
-            className="rounded-lg bg-purple-600 px-5 py-2 text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
+            type="button"
+            onClick={addPrompt}
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
           >
-            {running ? "Running..." : "Run Batch"}
+            + Add Prompt
           </button>
-        </>
-      ) : (
-        <>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter your prompt..."
-            rows={3}
-            className="mb-1 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-          {errors.prompt && (
-            <p className="text-red-400 text-xs mb-2">{errors.prompt}</p>
-          )}
-          <button
-            onClick={handleRun}
-            disabled={running}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {running ? "Running..." : "Run"}
-          </button>
-        </>
+          <span className="text-xs text-gray-600">
+            {running ? "" : "Ctrl+Enter to run"}
+          </span>
+        </div>
+        <button
+          onClick={handleSubmit}
+          disabled={running || totalTrials === 0}
+          className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {running
+            ? "Running..."
+            : totalTrials <= 1
+              ? "Run"
+              : `Run ${totalTrials} trials`}
+        </button>
+      </div>
+
+      {errors.prompts && (
+        <p className="text-red-400 text-xs mt-2">{errors.prompts}</p>
       )}
     </div>
   );

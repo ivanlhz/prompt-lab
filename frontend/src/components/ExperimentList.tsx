@@ -16,6 +16,18 @@ export default function ExperimentList() {
   const [creating, setCreating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setFile(null);
+    setErrors({});
+  };
+
+  const handleCancel = () => {
+    setShowCreate(false);
+    resetForm();
+  };
+
   const handleCreate = async () => {
     const result = experimentSchema.safeParse({
       name: name.trim(),
@@ -38,13 +50,12 @@ export default function ExperimentList() {
     try {
       const form = new FormData();
       form.append("name", result.data.name);
-      if (result.data.description) form.append("description", result.data.description);
+      if (result.data.description)
+        form.append("description", result.data.description);
       form.append("reference_image", result.data.file);
       const exp = await api.createExperiment(form);
       setShowCreate(false);
-      setName("");
-      setDescription("");
-      setFile(null);
+      resetForm();
       await refresh();
       navigate(`/experiments/${exp.id}`);
     } finally {
@@ -52,54 +63,88 @@ export default function ExperimentList() {
     }
   };
 
+  const labelClass = "block text-xs font-medium text-gray-400 mb-1";
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Experiments</h1>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-700"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 transition-colors"
         >
           + New Experiment
         </button>
       </div>
 
       {showCreate && (
-        <div className="mb-6 rounded-lg border border-gray-800 bg-gray-900 p-6">
+        <div className="mb-6 rounded-xl border border-gray-800 bg-gray-900 p-6">
           <h2 className="mb-4 text-lg font-semibold">Create Experiment</h2>
           <div className="space-y-4">
             <div>
+              <label className={labelClass} htmlFor="exp-name">
+                Name
+              </label>
               <input
+                id="exp-name"
                 type="text"
                 placeholder="Experiment name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                maxLength={100}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-colors"
               />
-              {errors.name && (
-                <p className="text-red-400 text-xs mt-1">{errors.name}</p>
-              )}
+              <div className="flex justify-between mt-1">
+                {errors.name ? (
+                  <p className="text-red-400 text-xs">{errors.name}</p>
+                ) : (
+                  <span />
+                )}
+                <span className="text-xs text-gray-600">
+                  {name.length}/100
+                </span>
+              </div>
             </div>
-            <textarea
-              placeholder="Description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 focus:border-blue-500 focus:outline-none"
-            />
+
             <div>
+              <label className={labelClass} htmlFor="exp-desc">
+                Description{" "}
+                <span className="text-gray-600 font-normal">(optional)</span>
+              </label>
+              <textarea
+                id="exp-desc"
+                placeholder="What are you testing?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Reference Image</label>
               <ImageUploader onFileSelected={setFile} />
               {errors.file && (
                 <p className="text-red-400 text-xs mt-1">{errors.file}</p>
               )}
             </div>
-            <button
-              onClick={handleCreate}
-              disabled={creating}
-              className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50"
-            >
-              {creating ? "Creating..." : "Create"}
-            </button>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleCreate}
+                disabled={creating}
+                className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {creating ? "Creating..." : "Create"}
+              </button>
+              <button
+                onClick={handleCancel}
+                type="button"
+                className="rounded-lg px-4 py-2 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -116,12 +161,12 @@ export default function ExperimentList() {
             <div
               key={exp.id}
               onClick={() => navigate(`/experiments/${exp.id}`)}
-              className="cursor-pointer rounded-lg border border-gray-800 bg-gray-900 p-4 transition hover:border-gray-600"
+              className="group cursor-pointer rounded-xl border border-gray-800 bg-gray-900 p-4 transition hover:border-gray-600 hover:bg-gray-900/80"
             >
               <img
                 src={api.imageUrl(exp.reference_image_path)}
                 alt={exp.name}
-                className="mb-3 h-40 w-full rounded object-cover"
+                className="mb-3 h-40 w-full rounded-lg object-cover transition group-hover:opacity-90"
               />
               <h3 className="font-semibold">{exp.name}</h3>
               {exp.description && (

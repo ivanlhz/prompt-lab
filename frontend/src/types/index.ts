@@ -35,10 +35,18 @@ export interface ProviderInfo {
   models: string[];
 }
 
+export interface ReferenceCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface NormalizedParams {
   temperature?: number;
   aspect_ratio?: string;
   image_size?: string;
+  reference_crop?: ReferenceCrop;
   [key: string]: unknown;
 }
 

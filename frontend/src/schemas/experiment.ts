@@ -14,7 +14,7 @@ export const experimentSchema = z.object({
     .max(100, "Name must be 100 characters or less"),
   description: z.string().optional(),
   file: z
-    .instanceof(File, "Reference image is required")
+    .instanceof(File, { message: "Reference image is required" })
     .refine(
       (f) => ALLOWED_IMAGE_TYPES.includes(f.type),
       "File must be PNG, JPG, or WebP"
