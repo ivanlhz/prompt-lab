@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useExperiments } from "../hooks/useExperiments";
 import { formatDate } from "../lib/utils";
+import { experimentSchema } from "../schemas/experiment";
 import ImageUploader from "./ImageUploader";
 
 export default function ExperimentList() {
@@ -13,15 +14,32 @@ export default function ExperimentList() {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleCreate = async () => {
-    if (!name.trim() || !file) return;
+    const result = experimentSchema.safeParse({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      file,
+    });
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = String(issue.path[0] || "form");
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setErrors({});
     setCreating(true);
     try {
       const form = new FormData();
-      form.append("name", name.trim());
-      if (description.trim()) form.append("description", description.trim());
-      form.append("reference_image", file);
+      form.append("name", result.data.name);
+      if (result.data.description) form.append("description", result.data.description);
+      form.append("reference_image", result.data.file);
       const exp = await api.createExperiment(form);
       setShowCreate(false);
       setName("");
@@ -50,13 +68,18 @@ export default function ExperimentList() {
         <div className="mb-6 rounded-lg border border-gray-800 bg-gray-900 p-6">
           <h2 className="mb-4 text-lg font-semibold">Create Experiment</h2>
           <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Experiment name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 focus:border-blue-500 focus:outline-none"
-            />
+            <div>
+              <input
+                type="text"
+                placeholder="Experiment name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              />
+              {errors.name && (
+                <p className="text-red-400 text-xs mt-1">{errors.name}</p>
+              )}
+            </div>
             <textarea
               placeholder="Description (optional)"
               value={description}
@@ -64,10 +87,15 @@ export default function ExperimentList() {
               rows={2}
               className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 focus:border-blue-500 focus:outline-none"
             />
-            <ImageUploader onFileSelected={setFile} />
+            <div>
+              <ImageUploader onFileSelected={setFile} />
+              {errors.file && (
+                <p className="text-red-400 text-xs mt-1">{errors.file}</p>
+              )}
+            </div>
             <button
               onClick={handleCreate}
-              disabled={!name.trim() || !file || creating}
+              disabled={creating}
               className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50"
             >
               {creating ? "Creating..." : "Create"}

@@ -35,10 +35,17 @@ export interface ProviderInfo {
   models: string[];
 }
 
+export interface NormalizedParams {
+  temperature?: number;
+  aspect_ratio?: string;
+  image_size?: string;
+  [key: string]: unknown;
+}
+
 export interface TrialCreatePayload {
   prompt: string;
   provider: string;
   model: string;
-  normalized_params?: Record<string, unknown>;
+  normalized_params?: NormalizedParams;
   extra_params?: Record<string, unknown>;
 }
