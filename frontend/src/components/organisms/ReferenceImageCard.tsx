@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react";
 import type { ReferenceCrop } from "../../types";
-import { Button, Card } from "../atoms";
+import Button from "../atoms/Button";
+import Card from "../atoms/Card";
 
 interface Props {
   imageUrl: string;

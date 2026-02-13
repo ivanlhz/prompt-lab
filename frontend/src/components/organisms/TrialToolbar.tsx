@@ -1,4 +1,5 @@
-import { Button, Select } from "../atoms";
+import Button from "../atoms/Button";
+import Select from "../atoms/Select";
 
 interface Props {
   trialCount: number;

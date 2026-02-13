@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, isAbortError } from "../api/client";
 import type {
@@ -7,11 +7,16 @@ import type {
   Trial,
   TrialCreatePayload,
 } from "../types";
-import { PageHeader, ReferenceImageCard, TrialToolbar } from "./organisms";
-import ComparisonGrid from "./ComparisonGrid";
+import { PageHeader } from "./organisms/PageHeader";
+import ReferenceImageCard from "./organisms/ReferenceImageCard";
+import TrialToolbar from "./organisms/TrialToolbar";
 import PromptEditor from "./PromptEditor";
+
+const ComparisonGrid = lazy(() =>
+  import("./ComparisonGrid").then((m) => ({ default: m.default }))
+);
 import TrialCard from "./TrialCard";
-import { Button } from "./atoms";
+import Button from "./atoms/Button";
 
 export default function ExperimentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -259,27 +264,22 @@ export default function ExperimentDetail() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={experiment.name}
-        description={experiment.description ?? undefined}
-        leftContent={
-          <Button
-            variant="ghost"
-            className="!px-0 shrink-0"
-            onClick={() => navigate("/")}
-          >
+      <PageHeader.Root>
+        <PageHeader.Left>
+          <Button variant="ghost" className="!px-0" onClick={() => navigate("/")}>
             ← Back
           </Button>
-        }
-      >
-        <Button
-          variant="ghost"
-          className="!text-red-400 shrink-0"
-          onClick={handleDelete}
-        >
-          Delete experiment
-        </Button>
-      </PageHeader>
+        </PageHeader.Left>
+        <PageHeader.Title
+          title={experiment.name}
+          description={experiment.description ?? undefined}
+        />
+        <PageHeader.Actions>
+          <Button variant="ghost" className="!text-red-400" onClick={handleDelete}>
+            Delete experiment
+          </Button>
+        </PageHeader.Actions>
+      </PageHeader.Root>
 
       <div className="flex-1 p-6">
         <section className="mb-6 grid grid-cols-12 gap-4" data-purpose="top-grid">
@@ -336,12 +336,14 @@ export default function ExperimentDetail() {
         </section>
       </div>
 
-      {showComparison && selectedTrials.length >= 2 && (
-        <ComparisonGrid
-          trials={selectedTrials}
-          onClose={() => setShowComparison(false)}
-        />
-      )}
+      {showComparison && selectedTrials.length >= 2 ? (
+        <Suspense fallback={null}>
+          <ComparisonGrid
+            trials={selectedTrials}
+            onClose={() => setShowComparison(false)}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useExperiments } from "../hooks/useExperiments";
 import { experimentSchema } from "../schemas/experiment";
-import { PageHeader, CreateExperimentForm, ExperimentCard } from "./organisms";
-import { Button } from "./atoms";
+import { PageHeader } from "./organisms/PageHeader";
+import CreateExperimentForm from "./organisms/CreateExperimentForm";
+import ExperimentCard from "./organisms/ExperimentCard";
+import Button from "./atoms/Button";
 
 export default function ExperimentList() {
   const { experiments, loading, refresh } = useExperiments();
@@ -65,11 +67,14 @@ export default function ExperimentList() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Experiments">
-        <Button onClick={() => setShowCreate(!showCreate)}>
-          + New Experiment
-        </Button>
-      </PageHeader>
+      <PageHeader.Root>
+        <PageHeader.Title title="Experiments" />
+        <PageHeader.Actions>
+          <Button onClick={() => setShowCreate(!showCreate)}>
+            + New Experiment
+          </Button>
+        </PageHeader.Actions>
+      </PageHeader.Root>
 
       <div className="flex-1 p-6">
         {showCreate && (

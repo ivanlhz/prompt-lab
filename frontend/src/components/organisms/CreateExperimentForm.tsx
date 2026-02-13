@@ -1,6 +1,9 @@
-import { Card } from "../atoms";
-import { Button, Input, Label, Textarea } from "../atoms";
-import { FormField } from "../molecules";
+import Card from "../atoms/Card";
+import Button from "../atoms/Button";
+import Input from "../atoms/Input";
+import Label from "../atoms/Label";
+import Textarea from "../atoms/Textarea";
+import FormField from "../molecules/FormField";
 import ImageUploader from "../ImageUploader";
 
 interface Props {

@@ -1,8 +1,11 @@
-import { useState, type KeyboardEvent } from "react";
+import { lazy, memo, Suspense, useState, type KeyboardEvent } from "react";
 import { api } from "../api/client";
 import type { Trial } from "../types";
 import { formatDate } from "../lib/utils";
-import ImageZoomModal from "./ImageZoomModal";
+
+const ImageZoomModal = lazy(() =>
+  import("./ImageZoomModal").then((m) => ({ default: m.default }))
+);
 
 interface Props {
   trial: Trial;
@@ -12,7 +15,7 @@ interface Props {
   onDeleted: (id: string) => void;
 }
 
-export default function TrialCard({
+function TrialCard({
   trial,
   selected,
   onToggleSelect,
@@ -68,7 +71,7 @@ export default function TrialCard({
 
   return (
     <div
-      className={`rounded-xl border bg-gray-900 p-3 transition ${
+      className={`trial-card-item rounded-xl border bg-gray-900 p-3 transition ${
         selected ? "border-blue-500 ring-1 ring-blue-500/30" : "border-gray-800"
       }`}
     >
@@ -217,13 +220,17 @@ export default function TrialCard({
         {formatDate(trial.created_at)}
       </div>
 
-      {zoomOpen && trial.result_image_path && (
-        <ImageZoomModal
-          imageUrl={api.imageUrl(trial.result_image_path)}
-          alt="Generated result"
-          onClose={() => setZoomOpen(false)}
-        />
-      )}
+      {zoomOpen && trial.result_image_path ? (
+        <Suspense fallback={null}>
+          <ImageZoomModal
+            imageUrl={api.imageUrl(trial.result_image_path)}
+            alt="Generated result"
+            onClose={() => setZoomOpen(false)}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }
+
+export default memo(TrialCard);

@@ -78,12 +78,12 @@ export default function ComparisonGrid({ trials, onClose }: Props) {
                   {trial.prompt}
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  {trial.score && (
+                  {typeof trial.score === "number" ? (
                     <span className="text-yellow-400">
                       {"★".repeat(trial.score)}
                       {"☆".repeat(5 - trial.score)}
                     </span>
-                  )}
+                  ) : null}
                   {trial.duration_ms != null && (
                     <span className="text-gray-500">
                       {(trial.duration_ms / 1000).toFixed(1)}s

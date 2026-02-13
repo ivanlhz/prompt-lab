@@ -8,8 +8,12 @@ import {
   getSizesForModel,
   supportsAspectRatio,
 } from "../schemas/trial";
-import { Button, Card, Select } from "./atoms";
-import { FormField, PromptRow, TemperatureSlider } from "./molecules";
+import Button from "./atoms/Button";
+import Card from "./atoms/Card";
+import Select from "./atoms/Select";
+import FormField from "./molecules/FormField";
+import PromptRow from "./molecules/PromptRow";
+import TemperatureSlider from "./molecules/TemperatureSlider";
 
 interface Props {
   onRun: (payload: TrialCreatePayload) => void;

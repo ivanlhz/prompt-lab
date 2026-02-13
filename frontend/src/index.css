@@ -52,3 +52,10 @@ input[type="range"]::-moz-range-thumb {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-app-subtext);
 }
+
+/* Long lists: defer off-screen rendering (content-visibility) */
+.trial-card-item,
+.experiment-card-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 280px;
+}

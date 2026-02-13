@@ -1,10 +1,5 @@
-import {
-  IconExperiment,
-  IconHistory,
-  IconAssets,
-  IconSettings,
-} from "../atoms/Icons";
-import { NavItem } from "../molecules";
+import { IconExperiment, IconHistory, IconAssets, IconSettings } from "../atoms/Icons";
+import NavItem from "../molecules/NavItem";
 
 const navItems = [
   { to: "/", label: "Experiment", icon: <IconExperiment /> },
