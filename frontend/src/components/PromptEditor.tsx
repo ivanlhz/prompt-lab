@@ -46,9 +46,13 @@ export default function PromptEditor({
     providers.find((p) => p.name === provider)?.models || [];
 
   useEffect(() => {
+   const updateModel = () => {
     if (currentModels.length > 0 && !currentModels.includes(model)) {
       setModel(currentModels[0]);
     }
+   }
+
+   updateModel()
   }, [provider, currentModels, model, providers]);
 
   const availableSizes = getSizesForModel(model);
@@ -56,12 +60,18 @@ export default function PromptEditor({
 
   // Reset image size / aspect ratio when model changes and doesn't support them
   useEffect(() => {
+   const updateSizeImage = () => {
     if (imageSize && !availableSizes.some((s) => s.value === imageSize)) {
       setImageSize("");
     }
+   }
+   const updateAspectRatio = () => {
     if (aspectRatio && !hasAspectRatio) {
       setAspectRatio("");
     }
+   }
+   updateSizeImage()
+   updateAspectRatio()
   }, [model, availableSizes, imageSize, aspectRatio, hasAspectRatio]);
 
   const updatePrompt = (index: number, value: string) => {
