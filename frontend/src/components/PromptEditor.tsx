@@ -1,19 +1,11 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
-import { api } from "../api/client";
-import type { ProviderInfo, ReferenceCrop, TrialCreatePayload } from "../types";
-import {
-  trialFormSchema,
-  ASPECT_RATIOS,
-  MAX_IMAGES_PER_PROMPT,
-  getSizesForModel,
-  supportsAspectRatio,
-} from "../schemas/trial";
+import type { ReferenceCrop, TrialCreatePayload } from "../types";
 import Button from "./atoms/Button";
 import Card from "./atoms/Card";
 import Select from "./atoms/Select";
 import FormField from "./molecules/FormField";
 import PromptRow from "./molecules/PromptRow";
 import TemperatureSlider from "./molecules/TemperatureSlider";
+import { usePromptEditor } from "./usePromptEditor";
 
 interface Props {
   onRun: (payload: TrialCreatePayload) => void;
@@ -28,163 +20,35 @@ export default function PromptEditor({
   running,
   referenceCrop,
 }: Props) {
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [provider, setProvider] = useState("");
-  const [model, setModel] = useState("");
-  const [prompts, setPrompts] = useState<string[]>([""]);
-  const [temperature, setTemperature] = useState("1");
-  const [imagesPerPrompt, setImagesPerPrompt] = useState(1);
-  const [aspectRatio, setAspectRatio] = useState("");
-  const [imageSize, setImageSize] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    api.listProviders().then((list) => {
-      setProviders(list);
-      if (list.length > 0) {
-        setProvider(list[0].name);
-        setModel(list[0].models[0] || "");
-      }
-    });
-  }, []);
-
-  const currentModels =
-    providers.find((p) => p.name === provider)?.models || [];
-
-  useEffect(() => {
-   const updateModel = () => {
-    if (currentModels.length > 0 && !currentModels.includes(model)) {
-      setModel(currentModels[0]);
-    }
-   }
-
-   updateModel()
-  }, [provider, currentModels, model, providers]);
-
-  const availableSizes = getSizesForModel(model);
-  const hasAspectRatio = supportsAspectRatio(model);
-
-  // Reset image size / aspect ratio when model changes and doesn't support them
-  useEffect(() => {
-   const updateSizeImage = () => {
-    if (imageSize && !availableSizes.some((s) => s.value === imageSize)) {
-      setImageSize("");
-    }
-   }
-   const updateAspectRatio = () => {
-    if (aspectRatio && !hasAspectRatio) {
-      setAspectRatio("");
-    }
-   }
-   updateSizeImage()
-   updateAspectRatio()
-  }, [model, availableSizes, imageSize, aspectRatio, hasAspectRatio]);
-
-  const updatePrompt = (index: number, value: string) => {
-    setPrompts((prev) => prev.map((p, i) => (i === index ? value : p)));
-  };
-
-  const addPrompt = () => {
-    setPrompts((prev) => [...prev, ""]);
-  };
-
-  const removePrompt = (index: number) => {
-    setPrompts((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const buildPayload = (promptText: string): TrialCreatePayload => {
-    const normalized_params: Record<string, unknown> = {
-      temperature: parseFloat(temperature),
-    };
-    if (aspectRatio) normalized_params.aspect_ratio = aspectRatio;
-    if (imageSize) normalized_params.image_size = imageSize;
-    if (referenceCrop) normalized_params.reference_crop = referenceCrop;
-
-    return {
-      prompt: promptText,
-      provider,
-      model,
-      normalized_params,
-    };
-  };
-
-  const nonEmptyPrompts = prompts
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  const totalTrials = nonEmptyPrompts.length * imagesPerPrompt;
-
-  const validate = (): boolean => {
-    const formData = {
-      provider,
-      model,
-      temperature: parseFloat(temperature),
-      prompts: prompts.map((p) => p.trim()),
-      imagesPerPrompt,
-      ...(aspectRatio && { aspectRatio }),
-      ...(imageSize && { imageSize }),
-    };
-
-    const result = trialFormSchema.safeParse(formData);
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of result.error.issues) {
-        const path = issue.path;
-        const firstPath = path[0];
-        // prompts.0 → "prompt-0", prompts → "prompts"
-        const key =
-          firstPath === "prompts" && typeof path[1] === "number"
-            ? `prompt-${path[1]}`
-            : typeof firstPath === "string" || typeof firstPath === "number"
-              ? String(firstPath)
-              : "form";
-        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
-      setErrors(fieldErrors);
-      return false;
-    }
-    setErrors({});
-    return true;
-  };
-
-  const handleSubmit = () => {
-    if (!validate()) return;
-
-    const payloads: TrialCreatePayload[] = [];
-    for (const text of nonEmptyPrompts) {
-      for (let i = 0; i < imagesPerPrompt; i++) {
-        payloads.push(buildPayload(text));
-      }
-    }
-
-    if (payloads.length === 1) {
-      onRun(payloads[0]);
-    } else {
-      onBatchRun(payloads);
-    }
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
-  const providerOptions = providers.map((p) => ({ value: p.name, label: p.name }));
-  const modelOptions = currentModels.map((m) => ({ value: m, label: m }));
-  const imagesOptions = Array.from(
-    { length: MAX_IMAGES_PER_PROMPT },
-    (_, i) => ({ value: String(i + 1), label: `${i + 1}x` })
-  );
-  const aspectOptions = [
-    { value: "", label: "Auto" },
-    ...ASPECT_RATIOS.map((ar) => ({ value: ar, label: ar })),
-  ];
-  const sizeOptions = [
-    { value: "", label: "Default" },
-    ...availableSizes.map((s) => ({ value: s.value, label: s.label })),
-  ];
+  const {
+    provider,
+    setProvider,
+    model,
+    setModel,
+    prompts,
+    updatePrompt,
+    addPrompt,
+    removePrompt,
+    temperature,
+    setTemperature,
+    imagesPerPrompt,
+    setImagesPerPrompt,
+    aspectRatio,
+    setAspectRatio,
+    imageSize,
+    setImageSize,
+    errors,
+    hasAspectRatio,
+    availableSizes,
+    totalTrials,
+    handleSubmit,
+    handleKeyDown,
+    providerOptions,
+    modelOptions,
+    imagesOptions,
+    aspectOptions,
+    sizeOptions,
+  } = usePromptEditor({ referenceCrop, onRun, onBatchRun, running });
 
   return (
     <Card className="p-5">
@@ -232,9 +96,9 @@ export default function PromptEditor({
               disabled={!hasAspectRatio}
             />
           </FormField>
-          {!hasAspectRatio && (
+          {!hasAspectRatio ? (
             <p className="mt-1 text-xs text-app-subtext">Not supported by model</p>
-          )}
+          ) : null}
         </div>
         <div>
           <FormField label="Image Size">
@@ -246,9 +110,9 @@ export default function PromptEditor({
               disabled={availableSizes.length <= 1}
             />
           </FormField>
-          {availableSizes.length <= 1 && (
+          {availableSizes.length <= 1 ? (
             <p className="mt-1 text-xs text-app-subtext">Fixed by model</p>
-          )}
+          ) : null}
         </div>
         <div />
         <div />
@@ -297,9 +161,9 @@ export default function PromptEditor({
         </Button>
       </div>
 
-      {errors.prompts && (
+      {errors.prompts ? (
         <p className="mt-2 text-xs text-red-400">{errors.prompts}</p>
-      )}
+      ) : null}
     </Card>
   );
 }
