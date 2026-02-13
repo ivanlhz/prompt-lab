@@ -7,9 +7,11 @@ import type {
   Trial,
   TrialCreatePayload,
 } from "../types";
+import { PageHeader, ReferenceImageCard, TrialToolbar } from "./organisms";
 import ComparisonGrid from "./ComparisonGrid";
 import PromptEditor from "./PromptEditor";
 import TrialCard from "./TrialCard";
+import { Button } from "./atoms";
 
 export default function ExperimentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -257,79 +259,45 @@ export default function ExperimentDetail() {
 
   return (
     <div className="flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-[1] flex items-center gap-4 border-b border-app-border bg-app-bg/95 px-6 py-4 backdrop-blur">
-        <button
-          onClick={() => navigate("/")}
-          className="text-sm text-app-subtext hover:text-app-text transition-colors"
-        >
-          ← Back
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-semibold">{experiment.name}</h1>
-          {experiment.description && (
-            <p className="truncate text-sm text-app-subtext">{experiment.description}</p>
-          )}
-        </div>
-        <button
+      <PageHeader
+        title={experiment.name}
+        description={experiment.description ?? undefined}
+        leftContent={
+          <Button
+            variant="ghost"
+            className="!px-0 shrink-0"
+            onClick={() => navigate("/")}
+          >
+            ← Back
+          </Button>
+        }
+      >
+        <Button
+          variant="ghost"
+          className="!text-red-400 shrink-0"
           onClick={handleDelete}
-          className="text-sm text-app-subtext hover:text-red-400 transition-colors shrink-0"
         >
           Delete experiment
-        </button>
-      </header>
+        </Button>
+      </PageHeader>
 
       <div className="flex-1 p-6">
-        {/* Top row: Reference + Config */}
         <section className="mb-6 grid grid-cols-12 gap-4" data-purpose="top-grid">
-          {/* Reference Image card */}
-          <article className="col-span-12 rounded-xl border-2 border-app-accent bg-app-card p-4 shadow-[0_0_15px_rgba(168,85,247,0.15)] lg:col-span-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-app-subtext">Reference Image</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setReferenceCrop(null);
-                  setDraftCrop(null);
-                  setCropStart(null);
-                }}
-                className="text-xs text-app-subtext hover:text-app-text transition-colors"
-              >
-                Clear region
-              </button>
-            </div>
-            <p className="mb-2 text-xs text-app-subtext">
-              Drag over the image to select a region used for generation.
-            </p>
-            <div
-              className="relative inline-block w-full"
-              onMouseDown={handleCropStart}
-              onMouseMove={handleCropMove}
-              onMouseUp={finishCrop}
-              onMouseLeave={finishCrop}
-            >
-              <img
-                ref={referenceImgRef}
-                src={api.imageUrl(experiment.reference_image_path)}
-                alt="Reference"
-                className="max-h-64 w-full rounded-lg border border-app-border object-contain select-none"
-                draggable={false}
-              />
-              {(draftCrop ?? referenceCrop) && (
-                <div
-                  className="pointer-events-none absolute rounded border-2 border-app-accent bg-app-accent/20"
-                  style={{
-                    left: `${(draftCrop ?? referenceCrop)!.x * 100}%`,
-                    top: `${(draftCrop ?? referenceCrop)!.y * 100}%`,
-                    width: `${(draftCrop ?? referenceCrop)!.width * 100}%`,
-                    height: `${(draftCrop ?? referenceCrop)!.height * 100}%`,
-                  }}
-                />
-              )}
-            </div>
-          </article>
+          <ReferenceImageCard
+            imageUrl={api.imageUrl(experiment.reference_image_path)}
+            referenceCrop={referenceCrop}
+            draftCrop={draftCrop}
+            imageRef={referenceImgRef}
+            onCropStart={handleCropStart}
+            onCropMove={handleCropMove}
+            onCropEnd={finishCrop}
+            onClearRegion={() => {
+              setReferenceCrop(null);
+              setDraftCrop(null);
+              setCropStart(null);
+            }}
+          />
 
-          {/* General config + Prompts card */}
           <article className="col-span-12 lg:col-span-8">
             <PromptEditor
               onRun={handleRun}
@@ -340,44 +308,18 @@ export default function ExperimentDetail() {
           </article>
         </section>
 
-        {/* Trials */}
         <section>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <h2 className="text-lg font-semibold text-app-text">
-              Trials ({experiment.trials.length})
-            </h2>
-            <select
-              aria-label="Sort trials"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "date" | "score")}
-              className="rounded-lg border border-app-border bg-app-input px-2 py-1.5 text-xs text-app-text focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent/40"
-            >
-              <option value="date">Sort by date</option>
-              <option value="score">Sort by score</option>
-            </select>
-            {selectedIds.size >= 2 && (
-              <button
-                onClick={() => setShowComparison(true)}
-                className="rounded-lg bg-app-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-app-accent-hover transition-colors"
-              >
-                Compare ({selectedIds.size})
-              </button>
-            )}
-            <button
-              onClick={handleDeleteAllTrials}
-              disabled={deletingAll || experiment.trials.length === 0}
-              className="ml-auto rounded-lg border border-red-700/50 px-3 py-1.5 text-xs text-red-300 transition-colors hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deletingAll ? "Deleting..." : "Delete all trials"}
-            </button>
-            <button
-              onClick={handleStopActiveRequests}
-              disabled={stopping}
-              className="rounded-lg border border-orange-700/50 px-3 py-1.5 text-xs text-orange-300 transition-colors hover:bg-orange-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {stopping ? "Stopping..." : "Stop active requests"}
-            </button>
-          </div>
+          <TrialToolbar
+            trialCount={experiment.trials.length}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            compareCount={selectedIds.size}
+            onCompare={() => setShowComparison(true)}
+            onDeleteAll={handleDeleteAllTrials}
+            onStopActive={handleStopActiveRequests}
+            deletingAll={deletingAll}
+            stopping={stopping}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {sortedTrials.map((trial) => (

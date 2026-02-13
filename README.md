@@ -15,7 +15,12 @@ prompt-lab/
 ```
 
 - **Backend**: FastAPI, SQLite, proveedores de imagen (Gemini, PyAPI, etc.), cola de trials.
-- **Frontend**: React 19, React Router, Tailwind CSS v4, UI tipo VertexGuard (sidebar, experimentos, prompts, trials).
+- **Frontend**: React 19, React Router, Tailwind CSS v4, UI tipo VertexGuard. La UI sigue **Atomic Design**:
+  - `atoms/`: Button, Card, Input, Label, Select, Textarea, Range, Icons.
+  - `molecules/`: FormField, NavItem, PromptRow, TemperatureSlider.
+  - `organisms/`: Sidebar, PageHeader, ReferenceImageCard, TrialToolbar, ExperimentCard, CreateExperimentForm.
+  - `templates/`: AppLayout (sidebar + outlet).
+  - Páginas (ExperimentList, ExperimentDetail) componen organismos y templates.
 
 ## Requisitos
 
