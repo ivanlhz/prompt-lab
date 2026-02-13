@@ -166,11 +166,11 @@ export default function PromptEditor({
   };
 
   const selectClass =
-    "w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-colors";
-  const labelClass = "block text-xs font-medium text-gray-400 mb-1";
+    "w-full rounded-lg border border-app-border bg-app-input px-3 py-1.5 text-sm text-app-text focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent/40 transition-colors";
+  const labelClass = "block text-xs font-medium text-app-subtext mb-1";
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+    <div className="rounded-xl border border-app-border bg-app-card p-5">
       {/* Row 1: Provider, Model, Temperature, Images per prompt */}
       <div className="mb-3 grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
         <div>
@@ -220,7 +220,7 @@ export default function PromptEditor({
             <label className={labelClass + " mb-0"} htmlFor="pe-temp">
               Temperature
             </label>
-            <span className="text-xs font-medium text-gray-300">
+            <span className="text-xs font-medium text-app-subtext">
               {Number(temperature).toFixed(1)}
             </span>
           </div>
@@ -232,14 +232,14 @@ export default function PromptEditor({
             max="2"
             value={temperature}
             onChange={(e) => setTemperature(e.target.value)}
-            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-700 accent-blue-500"
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-app-input"
             aria-describedby="pe-temp-help"
           />
-          <div className="mt-1 flex justify-between text-[11px] text-gray-500">
+          <div className="mt-1 flex justify-between text-[11px] text-app-subtext">
             <span>0.0</span>
             <span>2.0</span>
           </div>
-          <p id="pe-temp-help" className="mt-1 text-[11px] text-gray-500">
+          <p id="pe-temp-help" className="mt-1 text-[11px] text-app-subtext">
             Lower = more consistent output. Higher = more creative variation.
           </p>
           {errors.temperature && (
@@ -289,7 +289,7 @@ export default function PromptEditor({
             ))}
           </select>
           {!hasAspectRatio && (
-            <p className="text-gray-600 text-xs mt-1">Not supported by model</p>
+            <p className="text-app-subtext text-xs mt-1">Not supported by model</p>
           )}
         </div>
 
@@ -312,7 +312,7 @@ export default function PromptEditor({
             ))}
           </select>
           {availableSizes.length <= 1 && (
-            <p className="text-gray-600 text-xs mt-1">Fixed by model</p>
+            <p className="text-app-subtext text-xs mt-1">Fixed by model</p>
           )}
         </div>
 
@@ -321,7 +321,7 @@ export default function PromptEditor({
       </div>
 
       {/* Separator */}
-      <div className="border-t border-gray-800 mb-4" />
+      <div className="border-t border-app-border mb-4" />
 
       {/* Prompt list */}
       <div className="space-y-3">
@@ -338,7 +338,7 @@ export default function PromptEditor({
                 <button
                   type="button"
                   onClick={() => removePrompt(index)}
-                  className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+                  className="text-xs text-app-subtext hover:text-red-400 transition-colors"
                 >
                   Remove
                 </button>
@@ -351,7 +351,7 @@ export default function PromptEditor({
               onKeyDown={handleKeyDown}
               placeholder="Describe the image transformation..."
               rows={2}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-colors"
+              className="w-full rounded-lg border border-app-border bg-app-input px-4 py-2.5 text-sm text-app-text placeholder-app-subtext focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent/40 transition-colors"
             />
             {errors[`prompt-${index}`] && (
               <p className="text-red-400 text-xs mt-1">
@@ -368,18 +368,18 @@ export default function PromptEditor({
           <button
             type="button"
             onClick={addPrompt}
-            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            className="text-xs text-app-accent hover:text-app-accent-hover transition-colors"
           >
             + Add Prompt
           </button>
-          <span className="text-xs text-gray-600">
+          <span className="text-xs text-app-subtext">
             {running ? "" : "Ctrl+Enter to run"}
           </span>
         </div>
         <button
           onClick={handleSubmit}
           disabled={running || totalTrials === 0}
-          className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg bg-app-accent px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-app-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {running
             ? "Running..."

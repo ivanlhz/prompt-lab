@@ -256,137 +256,144 @@ export default function ExperimentDetail() {
   );
 
   return (
-    <div>
-      <div className="mb-4 flex items-center gap-3">
+    <div className="flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-[1] flex items-center gap-4 border-b border-app-border bg-app-bg/95 px-6 py-4 backdrop-blur">
         <button
           onClick={() => navigate("/")}
-          className="text-sm text-gray-400 hover:text-gray-200"
+          className="text-sm text-app-subtext hover:text-app-text transition-colors"
         >
           ← Back
         </button>
-        <h1 className="text-2xl font-bold">{experiment.name}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-semibold">{experiment.name}</h1>
+          {experiment.description && (
+            <p className="truncate text-sm text-app-subtext">{experiment.description}</p>
+          )}
+        </div>
         <button
           onClick={handleDelete}
-          className="ml-auto text-sm text-gray-500 hover:text-red-400"
+          className="text-sm text-app-subtext hover:text-red-400 transition-colors shrink-0"
         >
           Delete experiment
         </button>
-      </div>
+      </header>
 
-      {experiment.description && (
-        <p className="mb-4 text-sm text-gray-400">{experiment.description}</p>
-      )}
-
-      {/* Reference image */}
-      <div className="mb-6">
-        <div className="mb-2 flex items-center gap-3">
-          <h2 className="text-sm font-medium text-gray-400">Reference Image</h2>
-          <button
-            type="button"
-            onClick={() => {
-              setReferenceCrop(null);
-              setDraftCrop(null);
-              setCropStart(null);
-            }}
-            className="text-xs text-gray-500 hover:text-gray-300"
-          >
-            Clear region
-          </button>
-        </div>
-        <p className="mb-2 text-xs text-gray-500">
-          Drag over the image to select a region used for generation.
-        </p>
-        <div
-          className="relative inline-block"
-          onMouseDown={handleCropStart}
-          onMouseMove={handleCropMove}
-          onMouseUp={finishCrop}
-          onMouseLeave={finishCrop}
-        >
-          <img
-            ref={referenceImgRef}
-            src={api.imageUrl(experiment.reference_image_path)}
-            alt="Reference"
-            className="max-h-64 rounded-lg border border-gray-800 object-contain select-none"
-            draggable={false}
-          />
-          {(draftCrop ?? referenceCrop) && (
+      <div className="flex-1 p-6">
+        {/* Top row: Reference + Config */}
+        <section className="mb-6 grid grid-cols-12 gap-4" data-purpose="top-grid">
+          {/* Reference Image card */}
+          <article className="col-span-12 rounded-xl border-2 border-app-accent bg-app-card p-4 shadow-[0_0_15px_rgba(168,85,247,0.15)] lg:col-span-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-medium text-app-subtext">Reference Image</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setReferenceCrop(null);
+                  setDraftCrop(null);
+                  setCropStart(null);
+                }}
+                className="text-xs text-app-subtext hover:text-app-text transition-colors"
+              >
+                Clear region
+              </button>
+            </div>
+            <p className="mb-2 text-xs text-app-subtext">
+              Drag over the image to select a region used for generation.
+            </p>
             <div
-              className="pointer-events-none absolute rounded border-2 border-blue-400 bg-blue-500/20"
-              style={{
-                left: `${(draftCrop ?? referenceCrop)!.x * 100}%`,
-                top: `${(draftCrop ?? referenceCrop)!.y * 100}%`,
-                width: `${(draftCrop ?? referenceCrop)!.width * 100}%`,
-                height: `${(draftCrop ?? referenceCrop)!.height * 100}%`,
-              }}
+              className="relative inline-block w-full"
+              onMouseDown={handleCropStart}
+              onMouseMove={handleCropMove}
+              onMouseUp={finishCrop}
+              onMouseLeave={finishCrop}
+            >
+              <img
+                ref={referenceImgRef}
+                src={api.imageUrl(experiment.reference_image_path)}
+                alt="Reference"
+                className="max-h-64 w-full rounded-lg border border-app-border object-contain select-none"
+                draggable={false}
+              />
+              {(draftCrop ?? referenceCrop) && (
+                <div
+                  className="pointer-events-none absolute rounded border-2 border-app-accent bg-app-accent/20"
+                  style={{
+                    left: `${(draftCrop ?? referenceCrop)!.x * 100}%`,
+                    top: `${(draftCrop ?? referenceCrop)!.y * 100}%`,
+                    width: `${(draftCrop ?? referenceCrop)!.width * 100}%`,
+                    height: `${(draftCrop ?? referenceCrop)!.height * 100}%`,
+                  }}
+                />
+              )}
+            </div>
+          </article>
+
+          {/* General config + Prompts card */}
+          <article className="col-span-12 lg:col-span-8">
+            <PromptEditor
+              onRun={handleRun}
+              onBatchRun={handleBatchRun}
+              running={running}
+              referenceCrop={referenceCrop}
             />
-          )}
-        </div>
+          </article>
+        </section>
+
+        {/* Trials */}
+        <section>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-app-text">
+              Trials ({experiment.trials.length})
+            </h2>
+            <select
+              aria-label="Sort trials"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "date" | "score")}
+              className="rounded-lg border border-app-border bg-app-input px-2 py-1.5 text-xs text-app-text focus:border-app-accent focus:outline-none focus:ring-1 focus:ring-app-accent/40"
+            >
+              <option value="date">Sort by date</option>
+              <option value="score">Sort by score</option>
+            </select>
+            {selectedIds.size >= 2 && (
+              <button
+                onClick={() => setShowComparison(true)}
+                className="rounded-lg bg-app-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-app-accent-hover transition-colors"
+              >
+                Compare ({selectedIds.size})
+              </button>
+            )}
+            <button
+              onClick={handleDeleteAllTrials}
+              disabled={deletingAll || experiment.trials.length === 0}
+              className="ml-auto rounded-lg border border-red-700/50 px-3 py-1.5 text-xs text-red-300 transition-colors hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {deletingAll ? "Deleting..." : "Delete all trials"}
+            </button>
+            <button
+              onClick={handleStopActiveRequests}
+              disabled={stopping}
+              className="rounded-lg border border-orange-700/50 px-3 py-1.5 text-xs text-orange-300 transition-colors hover:bg-orange-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {stopping ? "Stopping..." : "Stop active requests"}
+            </button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sortedTrials.map((trial) => (
+              <TrialCard
+                key={trial.id}
+                trial={trial}
+                selected={selectedIds.has(trial.id)}
+                onToggleSelect={() => toggleSelect(trial.id)}
+                onUpdated={handleTrialUpdated}
+                onDeleted={handleTrialDeleted}
+              />
+            ))}
+          </div>
+        </section>
       </div>
 
-      {/* Prompt editor */}
-      <div className="mb-6">
-        <PromptEditor
-          onRun={handleRun}
-          onBatchRun={handleBatchRun}
-          running={running}
-          referenceCrop={referenceCrop}
-        />
-      </div>
-
-      {/* Toolbar */}
-      <div className="mb-4 flex items-center gap-3">
-        <h2 className="text-lg font-semibold">
-          Trials ({experiment.trials.length})
-        </h2>
-        <select
-          aria-label="Sort trials"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as "date" | "score")}
-          className="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-xs"
-        >
-          <option value="date">Sort by date</option>
-          <option value="score">Sort by score</option>
-        </select>
-        {selectedIds.size >= 2 && (
-          <button
-            onClick={() => setShowComparison(true)}
-            className="rounded bg-purple-600 px-3 py-1 text-xs font-medium hover:bg-purple-700"
-          >
-            Compare ({selectedIds.size})
-          </button>
-        )}
-        <button
-          onClick={handleDeleteAllTrials}
-          disabled={deletingAll || experiment.trials.length === 0}
-          className="ml-auto rounded border border-red-700/50 px-3 py-1 text-xs text-red-300 transition-colors hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {deletingAll ? "Deleting..." : "Delete all trials"}
-        </button>
-        <button
-          onClick={handleStopActiveRequests}
-          disabled={stopping}
-          className="rounded border border-orange-700/50 px-3 py-1 text-xs text-orange-300 transition-colors hover:bg-orange-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {stopping ? "Stopping..." : "Stop active requests"}
-        </button>
-      </div>
-
-      {/* Trials grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {sortedTrials.map((trial) => (
-          <TrialCard
-            key={trial.id}
-            trial={trial}
-            selected={selectedIds.has(trial.id)}
-            onToggleSelect={() => toggleSelect(trial.id)}
-            onUpdated={handleTrialUpdated}
-            onDeleted={handleTrialDeleted}
-          />
-        ))}
-      </div>
-
-      {/* Comparison modal */}
       {showComparison && selectedTrials.length >= 2 && (
         <ComparisonGrid
           trials={selectedTrials}
