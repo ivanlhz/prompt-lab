@@ -1,0 +1,34 @@
+# Local environment files
+.env
+.env.*
+
+# Python backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend / Node
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Project data
+data/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Local AI/tooling workspaces
+.agents/
+.claude/
+.cursor/
+.trae/
+
+# Backend is managed as a separate git repository
+backend/
