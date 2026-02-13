@@ -1,0 +1,16 @@
+{
+  "name": "prompt-lab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workspace para experimentar con prompts e imágenes",
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    "dev:backend": "cd backend && uv run uvicorn app.main:app --reload --reload-dir app",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "install:all": "pnpm install && cd backend && uv sync"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

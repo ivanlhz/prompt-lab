@@ -29,6 +29,3 @@ Thumbs.db
 .claude/
 .cursor/
 .trae/
-
-# Backend is managed as a separate git repository
-backend/
