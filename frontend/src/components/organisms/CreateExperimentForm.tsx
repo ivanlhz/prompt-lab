@@ -64,9 +64,13 @@ export default function CreateExperimentForm({
           />
         </div>
 
-        <FormField label="Reference Image" error={errors.file}>
+        <FormField label="Reference Image (optional)" error={errors.file}>
           <ImageUploader onFileSelected={onFileSelected} />
         </FormField>
+
+        {errors.form ? (
+          <p className="text-sm text-red-400">{errors.form}</p>
+        ) : null}
 
         <div className="flex items-center gap-3 pt-2">
           <Button

@@ -2,7 +2,9 @@ export interface Experiment {
   id: string;
   name: string;
   description: string | null;
-  reference_image_path: string;
+  /** @deprecated Use reference_image_paths; first image for backward compat */
+  reference_image_path: string | null;
+  reference_image_paths: string[];
   created_at: string;
   updated_at: string;
   trial_count: number;
@@ -56,4 +58,17 @@ export interface TrialCreatePayload {
   model: string;
   normalized_params?: NormalizedParams;
   extra_params?: Record<string, unknown>;
+}
+
+export interface AppSettings {
+  GEMINI_API_KEY: string;
+  OPENAI_API_KEY: string;
+  PYAPI_API_KEY: string;
+  GEMINI_API_BASE_URL: string;
+  PYAPI_BASE_URL: string;
+  DATA_DIR: string;
+  CLOUDINARY_CLOUD_NAME: string;
+  CLOUDINARY_API_KEY: string;
+  CLOUDINARY_API_SECRET: string;
+  MAX_CONCURRENT_TRIALS: number;
 }

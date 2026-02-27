@@ -215,14 +215,20 @@ class PyApiProvider(ImageProvider):
 
     async def process(
         self,
-        image_path: Path,
+        image_paths: list[Path] | None,
         prompt: str,
         config: ProviderConfig,
     ) -> ProviderResult:
         if not self._api_key:
             raise RuntimeError("PIAPI/PYAPI key is not configured")
 
-        reference_image_url = await self._get_public_reference_url(image_path)
+        if not image_paths:
+            raise RuntimeError("PyAPI provider requires at least one reference image.")
+
+        reference_image_urls: list[str] = []
+        for image_path in image_paths:
+            url = await self._get_public_reference_url(image_path)
+            reference_image_urls.append(url)
         task_type = self._map_image_model_to_task_type(config.model)
         resolution = str(config.normalized_params.get("image_size", "1K")).upper()
         aspect_ratio = config.normalized_params.get("aspect_ratio")
@@ -235,8 +241,7 @@ class PyApiProvider(ImageProvider):
                 "output_format": "png",
                 "safety_level": "low",
                 "resolution": resolution,
-                # PiAPI Nano Banana Pro expects image_urls.
-                "image_urls": [reference_image_url],
+                "image_urls": reference_image_urls,
             },
         }
         # PiAPI Nano Banana Pro: for i2i (image_urls provided), aspect_ratio must be omitted.

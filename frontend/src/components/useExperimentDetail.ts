@@ -23,6 +23,9 @@ export function useExperimentDetail() {
   const [referenceCrop, setReferenceCrop] = useState<ReferenceCrop | null>(null);
   const [draftCrop, setDraftCrop] = useState<ReferenceCrop | null>(null);
   const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(null);
+  const [page, setPage] = useState(1);
+
+  const TRIALS_PAGE_SIZE = 12;
 
   const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -141,7 +144,7 @@ export function useExperimentDetail() {
       const optimisticIds = addOptimisticTrials([payload]);
       try {
         await api.createTrial(experiment.id, payload);
-        await load();
+        load();
       } catch (error) {
         removeTrialsByIds(optimisticIds);
         if (!isAbortError(error)) throw error;
@@ -159,7 +162,7 @@ export function useExperimentDetail() {
       const optimisticIds = addOptimisticTrials(payloads);
       try {
         await api.createBatchTrials(experiment.id, payloads);
-        await load();
+        load();
       } catch (error) {
         removeTrialsByIds(optimisticIds);
         if (!isAbortError(error)) throw error;
@@ -223,6 +226,37 @@ export function useExperimentDetail() {
     });
   }, []);
 
+  const clearCropRegion = useCallback(() => {
+    setReferenceCrop(null);
+    setDraftCrop(null);
+    setCropStart(null);
+  }, []);
+
+  const handleUploadReferenceImage = useCallback(
+    async (file: File) => {
+      if (!experiment) return;
+      const form = new FormData();
+      form.append("reference_image", file);
+      if (experiment.reference_image_paths.length === 0) {
+        await api.uploadReferenceImage(experiment.id, form);
+      } else {
+        await api.addReferenceImage(experiment.id, form);
+      }
+      await load();
+    },
+    [experiment, load]
+  );
+
+  const handleRemoveReferenceImageAt = useCallback(
+    async (index: number) => {
+      if (!experiment) return;
+      await api.deleteReferenceImageAt(experiment.id, index);
+      if (index === 0) clearCropRegion();
+      await load();
+    },
+    [experiment, load, clearCropRegion]
+  );
+
   const handleDelete = useCallback(async () => {
     if (!experiment) return;
     if (!confirm("Delete this experiment and all its trials?")) return;
@@ -239,11 +273,12 @@ export function useExperimentDetail() {
     });
   }, []);
 
-  const clearCropRegion = useCallback(() => {
-    setReferenceCrop(null);
-    setDraftCrop(null);
-    setCropStart(null);
-  }, []);
+  const handleDeleteAllReferenceImages = useCallback(async () => {
+    if (!experiment) return;
+    await api.deleteReferenceImage(experiment.id);
+    await load();
+    clearCropRegion();
+  }, [experiment, load, clearCropRegion]);
 
   const sortedTrials =
     experiment != null
@@ -252,6 +287,17 @@ export function useExperimentDetail() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         })
       : [];
+
+  const totalPages = Math.max(1, Math.ceil(sortedTrials.length / TRIALS_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginatedTrials = sortedTrials.slice(
+    (safePage - 1) * TRIALS_PAGE_SIZE,
+    safePage * TRIALS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [sortBy, experiment?.trials.length]);
 
   const selectedTrials =
     experiment != null
@@ -281,10 +327,17 @@ export function useExperimentDetail() {
     handleDeleteAllTrials,
     handleTrialUpdated,
     handleTrialDeleted,
+    handleUploadReferenceImage,
+    handleRemoveReferenceImageAt,
+    handleDeleteAllReferenceImages,
     handleDelete,
     toggleSelect,
-    sortedTrials,
+    sortedTrials: paginatedTrials,
     selectedTrials,
     navigate,
+    page: safePage,
+    totalPages,
+    trialsPageSize: TRIALS_PAGE_SIZE,
+    setPage,
   };
 }

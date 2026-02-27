@@ -1,4 +1,5 @@
 import type {
+  AppSettings,
   Experiment,
   ExperimentDetail,
   ProviderInfo,
@@ -67,6 +68,31 @@ export const api = {
   deleteExperiment: (id: string) =>
     request<void>(`/experiments/${id}`, { method: "DELETE" }),
 
+  /** Replace all reference images with this single image */
+  uploadReferenceImage: (experimentId: string, form: FormData) =>
+    request<Experiment>(`/experiments/${experimentId}/reference-image`, {
+      method: "PUT",
+      body: form,
+    }),
+
+  /** Append one reference image */
+  addReferenceImage: (experimentId: string, form: FormData) =>
+    request<Experiment>(`/experiments/${experimentId}/reference-image`, {
+      method: "POST",
+      body: form,
+    }),
+
+  deleteReferenceImage: (experimentId: string) =>
+    request<void>(`/experiments/${experimentId}/reference-image`, {
+      method: "DELETE",
+    }),
+
+  deleteReferenceImageAt: (experimentId: string, index: number) =>
+    request<Experiment>(
+      `/experiments/${experimentId}/reference-image/${index}`,
+      { method: "DELETE" }
+    ),
+
   // Trials
   createTrial: (experimentId: string, payload: TrialCreatePayload) =>
     request<Trial>(`/experiments/${experimentId}/trials`, {
@@ -99,6 +125,16 @@ export const api = {
 
   // Providers
   listProviders: () => request<ProviderInfo[]>("/providers"),
+
+  // Settings
+  getSettings: () => request<AppSettings>("/settings"),
+
+  updateSettings: (data: Partial<AppSettings>) =>
+    request<AppSettings>("/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
 
   // Images
   imageUrl: (path: string) => `${BASE}/images/${path}`,

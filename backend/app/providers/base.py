@@ -34,7 +34,7 @@ class ImageProvider(ABC):
     @abstractmethod
     async def process(
         self,
-        image_path: Path,
+        image_paths: list[Path] | None,
         prompt: str,
         config: ProviderConfig,
     ) -> ProviderResult:

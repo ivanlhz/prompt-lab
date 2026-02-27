@@ -110,7 +110,7 @@ async def create_trial(
     return trial
 
 
-async def execute_trial(trial_id: str, reference_image_path: str):
+async def execute_trial(trial_id: str, reference_image_paths: list[str]):
     """Execute a trial in the background. Uses its own DB session."""
     from app.database import async_session
 
@@ -135,7 +135,6 @@ async def execute_trial(trial_id: str, reference_image_path: str):
             trial.status = "running"
             await _commit_with_lock(db)
 
-            ref_path = settings.experiments_dir / reference_image_path
             config = ProviderConfig(
                 model=trial.model,
                 normalized_params=trial.normalized_params or {},
@@ -145,19 +144,32 @@ async def execute_trial(trial_id: str, reference_image_path: str):
                 settings.experiments_dir / trial.experiment_id / "trials" / trial.id
             )
 
-            source_image_path = ref_path
-            reference_crop = (trial.normalized_params or {}).get("reference_crop")
-            if isinstance(reference_crop, dict):
-                cropped_path = _crop_reference_image(
-                    ref_path, trial_dir / "reference-crop.png", reference_crop
-                )
-                if cropped_path:
-                    source_image_path = cropped_path
+            source_image_paths: list[Path] = []
+            if reference_image_paths:
+                reference_crop = (trial.normalized_params or {}).get("reference_crop")
+                for i, rel_path in enumerate(reference_image_paths):
+                    ref_path = settings.experiments_dir / rel_path
+                    if not ref_path.exists():
+                        continue
+                    use_path: Path = ref_path
+                    if i == 0 and isinstance(reference_crop, dict):
+                        cropped_path = _crop_reference_image(
+                            ref_path,
+                            trial_dir / "reference-crop.png",
+                            reference_crop,
+                        )
+                        if cropped_path:
+                            use_path = cropped_path
+                    source_image_paths.append(use_path)
 
             try:
                 provider = ProviderRegistry.get(trial.provider)
                 start = time.perf_counter()
-                result = await provider.process(source_image_path, trial.prompt, config)
+                result = await provider.process(
+                    source_image_paths if source_image_paths else None,
+                    trial.prompt,
+                    config,
+                )
                 elapsed_ms = int((time.perf_counter() - start) * 1000)
 
                 if _is_cancel_requested(trial_id):

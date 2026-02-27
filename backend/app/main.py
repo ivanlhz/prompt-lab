@@ -10,7 +10,7 @@ from app.database import init_db
 from app.providers.gemini import GeminiProvider
 from app.providers.pyapi import PyApiProvider
 from app.providers.registry import ProviderRegistry
-from app.routers import experiments, trials
+from app.routers import experiments, settings as settings_router, trials
 
 
 @asynccontextmanager
@@ -39,6 +39,7 @@ app.add_middleware(
 
 app.include_router(experiments.router)
 app.include_router(trials.router)
+app.include_router(settings_router.router)
 
 
 @app.get("/api/providers")

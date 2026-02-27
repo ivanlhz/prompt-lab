@@ -14,11 +14,25 @@ export const experimentSchema = z.object({
     .max(100, "Name must be 100 characters or less"),
   description: z.string().optional(),
   file: z
-    .instanceof(File, { message: "Reference image is required" })
-    .refine(
-      (f) => ALLOWED_IMAGE_TYPES.includes(f.type),
-      "File must be PNG, JPG, or WebP"
-    ),
+    .any()
+    .nullable()
+    .optional()
+    .superRefine((value, ctx) => {
+      if (value == null) return;
+      if (!(value instanceof File)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Reference image must be a file",
+        });
+        return;
+      }
+      if (!ALLOWED_IMAGE_TYPES.includes(value.type)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "File must be PNG, JPG, or WebP",
+        });
+      }
+    }),
 });
 
 export type ExperimentFormData = z.infer<typeof experimentSchema>;

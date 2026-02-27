@@ -17,6 +17,10 @@ class ProviderRegistry:
         return cls._providers[name]
 
     @classmethod
+    def clear(cls):
+        cls._providers.clear()
+
+    @classmethod
     def list_available(cls) -> list[dict]:
         return [
             {"name": p.name, "models": p.available_models}

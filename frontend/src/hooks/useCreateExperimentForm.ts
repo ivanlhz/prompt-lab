@@ -49,12 +49,19 @@ export function useCreateExperimentForm(refresh: () => Promise<void>) {
       if (result.data.description) {
         form.append("description", result.data.description);
       }
-      form.append("reference_image", result.data.file);
+      if (result.data.file) {
+        form.append("reference_image", result.data.file);
+      }
       const exp = await api.createExperiment(form);
       setShowCreate(false);
       resetForm();
       await refresh();
       navigate(`/experiments/${exp.id}`);
+    } catch (error) {
+      setErrors({
+        form:
+          error instanceof Error ? error.message : "Failed to create experiment",
+      });
     } finally {
       setCreating(false);
     }

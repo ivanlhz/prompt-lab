@@ -14,6 +14,7 @@ export type ImageSizeValue = (typeof IMAGE_SIZES)[number]["value"];
 export const MODEL_SUPPORTED_SIZES: Record<string, ImageSizeValue[]> = {
   "gemini-2.5-flash-image": ["1K"],
   "gemini-3-pro-image-preview": ["1K", "2K", "4K"],
+  "gemini-3.1-flash-image-preview": ["1K", "2K", "4K"],
 };
 
 export function getSizesForModel(model: string) {
@@ -25,6 +26,7 @@ export function getSizesForModel(model: string) {
 /** Models that support aspect_ratio. Models not listed do NOT support it. */
 const MODELS_WITH_ASPECT_RATIO = new Set([
   "gemini-3-pro-image-preview",
+  "gemini-3.1-flash-image-preview",
 ]);
 
 export function supportsAspectRatio(model: string): boolean {

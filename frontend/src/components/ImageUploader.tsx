@@ -2,9 +2,11 @@ import { useCallback, useState } from "react";
 
 interface Props {
   onFileSelected: (file: File) => void;
+  /** Override default "Drop reference image here" text */
+  label?: string;
 }
 
-export default function ImageUploader({ onFileSelected }: Props) {
+export default function ImageUploader({ onFileSelected, label }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -44,7 +46,7 @@ export default function ImageUploader({ onFileSelected }: Props) {
         />
       ) : (
         <div className="text-center text-gray-400">
-          <p className="text-lg">Drop reference image here</p>
+          <p className="text-lg">{label ?? "Drop reference image here"}</p>
           <p className="text-sm">or click to select</p>
         </div>
       )}

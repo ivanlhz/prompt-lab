@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import { useRef, type MouseEvent } from "react";
 import type { ReferenceCrop } from "../../types";
 import Button from "../atoms/Button";
 import Card from "../atoms/Card";
@@ -12,6 +12,8 @@ interface Props {
   onCropMove: (e: MouseEvent) => void;
   onCropEnd: () => void;
   onClearRegion: () => void;
+  onReplace?: (file: File) => void;
+  onRemove?: () => void;
 }
 
 export default function ReferenceImageCard({
@@ -23,16 +25,59 @@ export default function ReferenceImageCard({
   onCropMove,
   onCropEnd,
   onClearRegion,
+  onReplace,
+  onRemove,
 }: Props) {
   const crop = draftCrop ?? referenceCrop;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <Card accent className="col-span-12 lg:col-span-4">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-medium text-app-subtext">Reference Image</h2>
-        <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={onClearRegion}>
-          Clear region
-        </Button>
+        <div className="flex gap-1">
+          {referenceCrop ? (
+            <Button
+              variant="ghost"
+              className="!px-2 !py-1 text-xs"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={onClearRegion}
+            >
+              Clear region
+            </Button>
+          ) : null}
+          {onReplace ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onReplace(file);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                variant="ghost"
+                className="!px-2 !py-1 text-xs"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Replace
+              </Button>
+            </>
+          ) : null}
+          {onRemove ? (
+            <Button
+              variant="ghost"
+              className="!px-2 !py-1 text-xs !text-red-400"
+              onClick={onRemove}
+            >
+              Remove
+            </Button>
+          ) : null}
+        </div>
       </div>
       <p className="mb-2 text-xs text-app-subtext">
         Drag over the image to select a region used for generation.

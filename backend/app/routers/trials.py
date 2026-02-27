@@ -34,8 +34,9 @@ async def create_trial(
         extra_params=body.extra_params,
     )
 
+    ref_paths = experiment_service.get_reference_image_paths(exp)
     asyncio.create_task(
-        trial_service.execute_trial(trial.id, exp.reference_image_path)
+        trial_service.execute_trial(trial.id, ref_paths)
     )
     return trial
 
@@ -67,9 +68,10 @@ async def create_batch_trials(
         )
         trials.append(trial)
 
+    ref_paths = experiment_service.get_reference_image_paths(exp)
     for trial in trials:
         asyncio.create_task(
-            trial_service.execute_trial(trial.id, exp.reference_image_path)
+            trial_service.execute_trial(trial.id, ref_paths)
         )
     return trials
 

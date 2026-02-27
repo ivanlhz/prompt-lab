@@ -44,19 +44,29 @@ class GeminiProvider(ImageProvider):
 
     @property
     def available_models(self) -> list[str]:
-        return ["gemini-2.5-flash-image", "gemini-3-pro-image-preview"]
+        return [
+            "gemini-2.5-flash-image",
+            "gemini-3-pro-image-preview",
+            "gemini-3.1-flash-image-preview",
+        ]
 
     async def process(
         self,
-        image_path: Path,
+        image_paths: list[Path] | None,
         prompt: str,
         config: ProviderConfig,
     ) -> ProviderResult:
-        image_bytes = image_path.read_bytes()
-        mime = f"image/{image_path.suffix.lstrip('.').replace('jpg', 'jpeg')}"
+        parts: list[types.Part] = []
 
-        image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime)
+        if image_paths:
+            for image_path in image_paths:
+                image_bytes = image_path.read_bytes()
+                mime = f"image/{image_path.suffix.lstrip('.').replace('jpg', 'jpeg')}"
+                image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime)
+                parts.append(image_part)
+
         text_part = types.Part.from_text(text=prompt)
+        parts.append(text_part)
 
         # Build image_config (aspect_ratio, image_size)
         aspect_ratio = config.normalized_params.get("aspect_ratio")
@@ -79,7 +89,7 @@ class GeminiProvider(ImageProvider):
 
         response = self._client.models.generate_content(
             model=config.model,
-            contents=[image_part, text_part],
+            contents=parts,
             config=types.GenerateContentConfig(**generation_config),
         )
 
