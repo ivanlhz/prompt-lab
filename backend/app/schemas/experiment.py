@@ -41,9 +41,12 @@ class ExperimentRead(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def normalize_reference_image_paths(cls, data: object) -> object:
-        if not isinstance(data, dict):
+        if isinstance(data, dict):
+            data = dict(data)
+        elif hasattr(data, "__dict__"):
+            data = {k: v for k, v in data.__dict__.items() if not k.startswith("_")}
+        else:
             return data
-        data = dict(data)
         paths = _parse_reference_image_paths(data.get("reference_image_paths"))
         if not paths and data.get("reference_image_path"):
             paths = [data["reference_image_path"]]
