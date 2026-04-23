@@ -39,7 +39,6 @@ export default function ExperimentDetail() {
     handleTrialDeleted,
     handleUploadReferenceImage,
     handleRemoveReferenceImageAt,
-    handleDeleteAllReferenceImages,
     handleDelete,
     toggleSelect,
     sortedTrials,
