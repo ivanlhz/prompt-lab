@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import init_db
 from app.providers.gemini import GeminiProvider
+from app.providers.openai import OpenAIProvider
 from app.providers.pyapi import PyApiProvider
 from app.providers.registry import ProviderRegistry
 from app.routers import experiments, settings as settings_router, trials
@@ -22,6 +23,8 @@ async def lifespan(app: FastAPI):
     # Register providers
     if settings.GEMINI_API_KEY:
         ProviderRegistry.register(GeminiProvider())
+    if settings.OPENAI_API_KEY:
+        ProviderRegistry.register(OpenAIProvider())
     if settings.pyapi_api_key:
         ProviderRegistry.register(PyApiProvider())
 
