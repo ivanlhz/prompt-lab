@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.config import Settings, settings
 from app.providers.gemini import GeminiProvider
+from app.providers.openai import OpenAIProvider
 from app.providers.pyapi import PyApiProvider
 from app.providers.registry import ProviderRegistry
 
@@ -105,6 +106,8 @@ def _re_register_providers() -> None:
     ProviderRegistry.clear()
     if settings.GEMINI_API_KEY:
         ProviderRegistry.register(GeminiProvider())
+    if settings.OPENAI_API_KEY:
+        ProviderRegistry.register(OpenAIProvider())
     if settings.pyapi_api_key:
         ProviderRegistry.register(PyApiProvider())
 

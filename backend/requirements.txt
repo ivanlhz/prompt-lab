@@ -9,3 +9,5 @@ python-multipart>=0.0.18
 pillow>=11.0
 google-genai>=1.0
 httpx>=0.28
+openai>=1.0
+pyasn1<0.5
