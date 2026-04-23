@@ -59,7 +59,15 @@ class GeminiProvider(ImageProvider):
         parts: list[types.Part] = []
 
         if image_paths:
-            for image_path in image_paths:
+            labels = [
+                "[IMAGE 1 — PRIMARY SOURCE: This is the original photo to restore. Use this as the base. Preserve all faces, poses, objects, and composition EXACTLY from this image.]",
+                "[IMAGE 2 — COLOR REFERENCE ONLY: Use this image ONLY to extract the color palette (clothing colors, skin tones, wall color, frame finish). Do NOT copy faces, poses, composition, or any visual content from this image.]",
+                "[IMAGE 3 — ADDITIONAL REFERENCE]",
+                "[IMAGE 4 — ADDITIONAL REFERENCE]",
+            ]
+            for i, image_path in enumerate(image_paths):
+                if len(image_paths) > 1 and i < len(labels):
+                    parts.append(types.Part.from_text(text=labels[i]))
                 image_bytes = image_path.read_bytes()
                 mime = f"image/{image_path.suffix.lstrip('.').replace('jpg', 'jpeg')}"
                 image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime)
